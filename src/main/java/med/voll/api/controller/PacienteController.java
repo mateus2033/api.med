@@ -2,7 +2,12 @@ package med.voll.api.controller;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-import med.voll.api.domain.paciente.*;
+import med.voll.api.domain.entities.Paciente;
+import med.voll.api.domain.services.PacienteService;
+import med.voll.api.domain.valueobjects.paciente.DadosAtualizacaoPaciente;
+import med.voll.api.domain.valueobjects.paciente.DadosCadastroPaciente;
+import med.voll.api.domain.valueobjects.paciente.DadosDetalhamentoPaciente;
+import med.voll.api.domain.valueobjects.paciente.DadosListagemPacientes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,41 +20,39 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class PacienteController {
 
     @Autowired
-    PacienteRepository repository;
+    PacienteService service;
 
     @PostMapping
     public ResponseEntity Cadastro(@RequestBody @Valid DadosCadastroPaciente data, UriComponentsBuilder uriBuilder) {
         var paciente = new Paciente(data);
-        repository.save(paciente);
+        service.create(paciente);
         var uri = uriBuilder.path("pacientes/{id}").buildAndExpand(paciente.getId()).toUri();
         return ResponseEntity.created(uri).body(new DadosDetalhamentoPaciente(paciente));
     }
 
     @GetMapping
     public ResponseEntity<Page<DadosListagemPacientes>> listar(Pageable paginacao) {
-        var page = repository.findAll(paginacao).map(DadosListagemPacientes::new);
+        var page = service.getAll(paginacao);
         return ResponseEntity.ok(page);
     }
 
     @PutMapping
     @Transactional
     public ResponseEntity atualizar(@RequestBody @Valid DadosAtualizacaoPaciente dados){
-        var paciente = repository.getReferenceById(dados.id());
-        paciente.atualizarInformacoes(dados);
+        var paciente = service.update(dados);
         return ResponseEntity.ok(new DadosDetalhamentoPaciente(paciente));
     }
 
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity excluir(@PathVariable Long id) {
-        var paciente = repository.getReferenceById(id);
-        paciente.excluir();
+        service.disable(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity detalhar(@PathVariable Long id) {
-        var paciente = repository.getReferenceById(id);
+        var paciente = service.getById(id);
         return ResponseEntity.ok(new DadosDetalhamentoPaciente(paciente));
     }
 }
